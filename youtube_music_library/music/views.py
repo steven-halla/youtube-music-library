@@ -1,6 +1,4 @@
-from django.shortcuts import render
-
-# Create your views here.
+from django.http.response import Http404
 from .models import Song
 from .serializers import SongSerializer
 from rest_framework.views import APIView
@@ -22,9 +20,29 @@ class SongList(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SongView(APIView):
-    def get(self, request, id):
-        print(id)
-        song = Song.objects.get(pk=id)
+    def get_object(self, pk):
+        try:
+            return Song.objects.get(pk=pk)
+        except Song.DoesNotExist:
+            raise Http404
+
+    #get by id
+    def get(self, request, pk):
+        song = self.get_object(pk)
         serializer = SongSerializer(song)
         return Response(serializer.data)
 
+    #update
+    def put(self, request, pk):
+        song = self.get_object(pk)
+        serializer = SongSerializer(song, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    #delete
+    def delete(self, request, pk):
+        song = self.get_object(pk)
+        song.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
